@@ -11,30 +11,42 @@ from io import BufferedIOBase
 
 
 class KeyFrameNow(Enum):
+    """A quick enum to determine if the next frame should be a keyframe."""
+
     No = 0
     Maybe = 1
     Yes = 2
 
 
 class Opcode(Sized, Protocol):
-    def write(self, file: BufferedIOBase) -> None: ...
+    """An interface for opcodes used in the QOV encoding."""
+
+    def write(self, file: BufferedIOBase) -> None:
+        """Write the opcode to file."""
+        ...
 
 
 @dataclass
 class EncodedFrame:
+    """A helper class to represent how to encode a frame as a series of opcodes."""
+
     header: QovFrameHeader
     opcodes: List[Opcode]
 
     def __len__(self):
+        """Report the size of the frame in bytes."""
         return sum([len(opcode) for opcode in self.opcodes])
 
     def write(self, file: BufferedIOBase) -> None:
+        """Convert and write the frame to the provided file handle."""
         self.header.write(file)
         for opcode in self.opcodes:
             opcode.write(file)
 
 
 class Encoder:
+    """This class is responsible for encoding frames into the QOV format."""
+
     def __init__(
         self,
         file: BytesIO,
@@ -44,6 +56,7 @@ class Encoder:
         keyframe_interval: Optional[int] = None,
         max_keyframe_interval: Optional[int] = 600,
     ):
+        """Construct a new encoder."""
         self.header = QovHeader(width=width, height=height, colourspace=colourspace)
         self.file = file
         self.keyframe_interval = keyframe_interval
@@ -54,10 +67,12 @@ class Encoder:
         self.pixels = PixelHashMap()
 
     def trigger_keyframe(self) -> None:
+        """Ensure that the next frame is a keyframe."""
         self.frames_since_last_keyframe = -1
 
     @property
     def is_next_frame_keyframe(self) -> KeyFrameNow:
+        """Partly determine if the next frame is a keyframe."""
         if self.frames_since_last_keyframe == -1:
             return KeyFrameNow.Yes
 
@@ -78,7 +93,8 @@ class Encoder:
     def encode_keyframe(
         self, frame: NDArray[np.uint8], pixels: PixelHashMap
     ) -> EncodedFrame:
-        opcodes = []
+        """Encode a frame as a keyframe."""
+        opcodes: List[Opcode] = []
         # TODO
         return EncodedFrame(
             header=QovFrameHeader(frame_type=FrameType.Key), opcodes=opcodes
@@ -87,10 +103,12 @@ class Encoder:
     def encode_predicted(
         self, frame: NDArray[np.uint8], pixels: PixelHashMap
     ) -> EncodedFrame:
+        """Encode a predicted frame."""
         # TODO
         return self.encode_keyframe(frame, pixels)
 
     def push(self, frame: NDArray[np.uint8]) -> None:
+        """Push a new frame into the encoder."""
         is_keyframe = self.is_next_frame_keyframe
 
         if is_keyframe == KeyFrameNow.Yes:
