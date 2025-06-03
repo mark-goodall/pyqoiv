@@ -1,5 +1,5 @@
 from .types import ColourSpace, QovHeader, PixelHashMap, QovFrameHeader, FrameType
-from .opcodes import Opcode, RgbOpcode, IndexOpcode
+from .opcodes import Opcode, RgbOpcode, IndexOpcode, DiffOpcode
 from io import BytesIO
 from typing import Optional
 import numpy as np
@@ -88,13 +88,29 @@ class Encoder:
         """Encode a frame as a keyframe."""
         opcodes: List[Opcode] = []
 
+        last_pixel: Optional[NDArray[np.uint8]] = None
         for pixel in frame.reshape(-1, 3):
+            opcode = None
+
+            if last_pixel is not None:
+                # TODO Handle runs
+                if np.array_equal(pixel, last_pixel):
+                    pass
+                else:
+                    pass
+
+                diff = pixel - last_pixel
+                if -2 <= diff[0] < 2 and -2 <= diff[1] < 2 and -2 <= diff[2] < 2:
+                    opcode = DiffOpcode(diff[0], diff[1], diff[2])
+
             if pixel in pixels:
-                opcodes.append(IndexOpcode(index=pixels.push(pixel)))
-                continue
-            pixels.push(pixel)
+                opcode = IndexOpcode(index=pixels.push(pixel))
             # TODO determine Opcode to use
-            opcodes.append(RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2]))
+            pixels.push(pixel)
+            last_pixel = pixel
+            if opcode is None:
+                opcode = RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2])
+            opcodes.append(opcode)
         return EncodedFrame(
             header=QovFrameHeader(frame_type=FrameType.Key), opcodes=opcodes
         )

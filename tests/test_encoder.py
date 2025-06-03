@@ -31,6 +31,10 @@ def test_encoded_frame():
     assert first_byte == b"\x00"
     assert file.read() == b""  # Ensure no extra data is read
 
+    assert len(frame) == 1
+    frame.opcodes.append(TestOpcode())
+    assert len(frame) == 2
+
 
 @pytest.mark.parametrize(
     "video, width, height, frames, colourspace, keyframe_interval, max_keyframe_interval",
