@@ -1,0 +1,46 @@
+name: Test Code
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        poetry-version: ["latest", "main", "1.8.4"]
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install poetry
+        uses: abatilo/actions-poetry@3765cf608f2d4a72178a9fc5b918668e542b89b1 #v4
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - uses: actions/cache@v3
+        name: Setup cache
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+      - name: Install Dependencies
+        run: poetry install
+      - name: Tests
+        run: poetry run pytest --cov --cov-report=term-missing --junit-xml=test-results.xml
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "test-results.xml"
+        if: always()
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - uses: pre-commit/action@v3.0.1
