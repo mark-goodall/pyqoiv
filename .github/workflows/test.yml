@@ -58,8 +58,12 @@ jobs:
           hide_branch_rate: false
           hide_complexity: true
           indicators: true
-          output: both
+          output: file
           thresholds: "60 80"
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
+
+      - name: Add Code Coverage to Summary
+        run: echo "### Coverage" && cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
 
       - name: Add Coverage PR Comment
