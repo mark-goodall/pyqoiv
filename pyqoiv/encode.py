@@ -1,5 +1,5 @@
 from .types import ColourSpace, QovHeader, PixelHashMap, QovFrameHeader, FrameType
-from .opcodes import Opcode, RgbOpcode
+from .opcodes import Opcode, RgbOpcode, IndexOpcode
 from io import BytesIO
 from typing import Optional
 import numpy as np
@@ -89,6 +89,9 @@ class Encoder:
         opcodes: List[Opcode] = []
 
         for pixel in frame.reshape(-1, 3):
+            if pixel in pixels:
+                opcodes.append(IndexOpcode(index=pixels.push(pixel)))
+                continue
             pixels.push(pixel)
             # TODO determine Opcode to use
             opcodes.append(RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2]))
