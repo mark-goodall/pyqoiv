@@ -32,11 +32,11 @@ jobs:
       - name: Install Dependencies
         run: poetry install
       - name: Tests
-        run: poetry run pytest --cov --cov-report=term-missing --junit-xml=test-results.xml
+        run: poetry run pytest --cov --cov-report=term-missing --junit-xml=test-results.xml --cov-report xml:cov.xml
       - uses: pre-commit/action@v3.0.1
-        if: always() && matrix.os == 'ubuntu-latest'
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
       - name: Test Summary
         uses: test-summary/action@v2
         with:
           paths: "test-results.xml"
-        if: always() && matrix.os == 'ubuntu-latest'
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
