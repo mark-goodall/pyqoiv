@@ -55,3 +55,7 @@ repos:
     rev: v1.1.401
     hooks:
       - id: pyright
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
