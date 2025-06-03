@@ -1,5 +1,5 @@
 import pytest
-from pyqov.types import QovHeader, PixelHashMap, QovFrameHeader, FrameType
+from pyqoiv.types import QovHeader, PixelHashMap, QovFrameHeader, FrameType
 from io import BytesIO
 import numpy as np
 

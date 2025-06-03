@@ -1,12 +1,12 @@
 from .types import ColourSpace, QovHeader, PixelHashMap, QovFrameHeader, FrameType
+from .opcodes import Opcode, RgbOpcode
 from io import BytesIO
 from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Protocol
-from collections.abc import Sized
+from typing import List
 from io import BufferedIOBase
 
 
@@ -16,14 +16,6 @@ class KeyFrameNow(Enum):
     No = 0
     Maybe = 1
     Yes = 2
-
-
-class Opcode(Sized, Protocol):
-    """An interface for opcodes used in the QOV encoding."""
-
-    def write(self, file: BufferedIOBase) -> None:
-        """Write the opcode to file."""
-        ...
 
 
 @dataclass
@@ -95,7 +87,11 @@ class Encoder:
     ) -> EncodedFrame:
         """Encode a frame as a keyframe."""
         opcodes: List[Opcode] = []
-        # TODO
+
+        for pixel in frame.reshape(-1, 3):
+            pixels.push(pixel)
+            # TODO determine Opcode to use
+            opcodes.append(RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2]))
         return EncodedFrame(
             header=QovFrameHeader(frame_type=FrameType.Key), opcodes=opcodes
         )
@@ -104,7 +100,7 @@ class Encoder:
         self, frame: NDArray[np.uint8], pixels: PixelHashMap
     ) -> EncodedFrame:
         """Encode a predicted frame."""
-        # TODO
+        # TODO encode a predicted frame
         return self.encode_keyframe(frame, pixels)
 
     def push(self, frame: NDArray[np.uint8]) -> None:
@@ -128,3 +124,7 @@ class Encoder:
             else:
                 k.write(self.file)
                 self.pixels = new_pixels
+
+    def flush(self) -> None:
+        """Flush the encoder to the file."""
+        self.file.flush()
