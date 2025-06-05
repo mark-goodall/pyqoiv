@@ -63,7 +63,7 @@ jobs:
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
 
       - name: Add Code Coverage to Summary
-        run: echo "### Coverage" && cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+        run: (echo "### Coverage" && cat code-coverage-results.md) >> ${GITHUB_STEP_SUMMARY}
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
 
       - name: Add Coverage PR Comment
