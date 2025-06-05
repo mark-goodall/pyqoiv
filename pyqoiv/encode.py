@@ -1,5 +1,5 @@
 from .types import ColourSpace, QovHeader, PixelHashMap, QovFrameHeader, FrameType
-from .opcodes import Opcode, RgbOpcode, IndexOpcode, DiffOpcode
+from .opcodes import Opcode, RgbOpcode, IndexOpcode, DiffOpcode, RunOpcode
 from io import BytesIO
 from typing import Optional
 import numpy as np
@@ -89,15 +89,18 @@ class Encoder:
         opcodes: List[Opcode] = []
 
         last_pixel: Optional[NDArray[np.uint8]] = None
+        last_pixel_count = 0
         for pixel in frame.reshape(-1, 3):
             opcode = None
 
             if last_pixel is not None:
-                # TODO Handle runs
-                if np.array_equal(pixel, last_pixel):
-                    pass
-                else:
-                    pass
+                # Handle runs
+                if np.array_equal(pixel, last_pixel) and last_pixel_count < 62:
+                    last_pixel_count += 1
+                    continue
+                elif last_pixel_count > 0:
+                    opcodes.append(RunOpcode(run=last_pixel_count))
+                    last_pixel_count = 0
 
                 diff = pixel - last_pixel
                 if -2 <= diff[0] < 2 and -2 <= diff[1] < 2 and -2 <= diff[2] < 2:
@@ -105,7 +108,6 @@ class Encoder:
 
             if pixel in pixels:
                 opcode = IndexOpcode(index=pixels.push(pixel))
-            # TODO determine Opcode to use
             pixels.push(pixel)
             last_pixel = pixel
             if opcode is None:

@@ -1,4 +1,4 @@
-from pyqoiv.opcodes import RgbOpcode, IndexOpcode, DiffOpcode
+from pyqoiv.opcodes import RgbOpcode, IndexOpcode, DiffOpcode, RunOpcode
 from io import BytesIO
 import pytest
 
@@ -74,3 +74,47 @@ def test_diff_opcode_invalid():
     assert not DiffOpcode.is_next(BytesIO(b))
     with pytest.raises(ValueError):
         DiffOpcode.read(BytesIO(b))
+
+
+def test_run_opcode():
+    run = RunOpcode(42)
+    assert len(run) == 1
+    file = BytesIO()
+    run.write(file)
+    file.seek(0)
+    assert RunOpcode.is_next(file)
+    new_run = RunOpcode.read(file)
+    assert run == new_run
+
+
+def test_run_opcode_invalid():
+    file = BytesIO()
+    with pytest.raises(ValueError):
+        run = RunOpcode(63)
+        run.write(file)
+    with pytest.raises(ValueError):
+        run = RunOpcode(0)
+        run.write(file)
+    b = b"\x0f\x80\x40"
+    with pytest.raises(ValueError):
+        RunOpcode.read(BytesIO(b))
+
+
+def test_comparisions():
+    opcodes = [
+        RgbOpcode(255, 128, 64),
+        DiffOpcode(-1, 0, 1),
+        IndexOpcode(42),
+        RunOpcode(42),
+    ]
+
+    for a in opcodes:
+        for b in opcodes:
+            file = BytesIO()
+            a.write(file)
+            file.seek(0)
+            assert a.is_next(file)
+            if a == b:
+                assert b.is_next(file)
+            else:
+                assert not b.is_next(file)

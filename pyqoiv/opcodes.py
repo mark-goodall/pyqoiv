@@ -118,3 +118,36 @@ class DiffOpcode(Opcode):
         dg = ((code[0] >> 2) & 0x03) - 2
         db = (code[0] & 0x03) - 2
         return DiffOpcode(dr, dg, db)
+
+
+@dataclass
+class RunOpcode(Opcode):
+    """The QOI_OP_RUN opcode, encodes a run of identical pixels."""
+
+    run: int
+
+    def write(self, file: BufferedIOBase) -> None:
+        """Write the Run opcode to the provided file handle."""
+        if not (1 <= self.run <= 62):
+            raise ValueError("Run value must be between 1 and 62")
+        file.write(struct.pack("<B", 0xC0 | (self.run - 1)))
+
+    def __len__(self) -> int:
+        """Fixed size of 1"""
+        return 1
+
+    @staticmethod
+    def is_next(file: BufferedIOBase) -> bool:
+        """Determine if the next opcode is a RunOpcode."""
+        code = file.read(1)
+        file.seek(-1, os.SEEK_CUR)
+        return code[0] & 0xC0 == 0xC0 and code[0] != 0xFF and code[0] != 0xFE
+
+    @staticmethod
+    def read(file: BufferedIOBase) -> "RunOpcode":
+        """Read a Run opcode from the provided file handle."""
+        code = file.read(1)
+        if len(code) != 1 or code[0] & 0xC0 != 0xC0:
+            raise ValueError("Invalid Run opcode")
+        run = (code[0] & 0x3F) + 1
+        return RunOpcode(run=run)
