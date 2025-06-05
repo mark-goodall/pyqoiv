@@ -1,5 +1,6 @@
-from pyqoiv.encode import EncodedFrame, Opcode, Encoder
-from pyqoiv.types import QovFrameHeader, FrameType, ColourSpace
+from pyqoiv.encode import EncodedFrame, Encoder
+from pyqoiv.types import QovFrameHeader, FrameType, ColourSpace, PixelHashMap
+from pyqoiv.opcodes import IndexOpcode, RgbOpcode, RunOpcode, DiffOpcode, Opcode
 from io import BufferedIOBase, BytesIO
 from typing import Callable, Generator, Optional
 import numpy as np
@@ -63,3 +64,57 @@ def test_encoder_shrinks_video(
 
     # All of these simple tests should compress well
     assert size < max_size
+
+
+@pytest.mark.parametrize(
+    "frame",
+    [
+        np.zeros((10, 10, 3), dtype=np.uint8),
+        np.ones((10, 10, 3), dtype=np.uint8) * 255,
+        np.ones((10, 10, 3), dtype=np.uint8) * 128,
+    ],
+)
+def test_encoder_encodes_flat_frame_as_expected(frame: NDArray[np.uint8]):
+    encoder = Encoder(BytesIO(), width=10, height=10, colourspace=ColourSpace.sRGB)
+    encoded_frame = encoder.encode_keyframe(frame, PixelHashMap())
+    assert len(encoded_frame.opcodes) == 3
+    if frame[0, 0, 0] == 0:
+        assert isinstance(encoded_frame.opcodes[0], IndexOpcode)
+        assert encoded_frame.opcodes[0].index == 0
+    else:
+        assert isinstance(encoded_frame.opcodes[0], RgbOpcode)
+    assert isinstance(encoded_frame.opcodes[1], RunOpcode)
+    assert isinstance(encoded_frame.opcodes[2], RunOpcode)
+    assert encoded_frame.opcodes[1].run == 62
+    assert encoded_frame.opcodes[2].run == 100 - 1 - 62
+
+
+def test_encoder_uses_diff_opcode_as_expected():
+    encoder = Encoder(BytesIO(), width=10, height=10, colourspace=ColourSpace.sRGB)
+    encoded_frame = encoder.encode_keyframe(
+        np.array([[[1, 1, 1], [2, 2, 2], [2, 1, 1]]]), PixelHashMap()
+    )
+    assert len(encoded_frame.opcodes) == 3
+    assert isinstance(encoded_frame.opcodes[0], RgbOpcode)
+    assert isinstance(encoded_frame.opcodes[1], DiffOpcode)
+    assert encoded_frame.opcodes[1].dr == 1
+    assert encoded_frame.opcodes[1].dg == 1
+    assert encoded_frame.opcodes[1].db == 1
+    assert isinstance(encoded_frame.opcodes[2], DiffOpcode)
+    assert encoded_frame.opcodes[2].dr == 0
+    assert encoded_frame.opcodes[2].dg == -1
+    assert encoded_frame.opcodes[2].db == -1
+
+
+def test_encoder_uses_index_opcode_as_expected():
+    encoder = Encoder(BytesIO(), width=10, height=10, colourspace=ColourSpace.sRGB)
+    encoded_frame = encoder.encode_keyframe(
+        np.array([[[1, 1, 1], [2, 2, 2], [1, 1, 1]]]), PixelHashMap()
+    )
+    assert len(encoded_frame.opcodes) == 3
+    assert isinstance(encoded_frame.opcodes[0], RgbOpcode)
+    assert isinstance(encoded_frame.opcodes[1], DiffOpcode)
+    assert encoded_frame.opcodes[1].dr == 1
+    assert encoded_frame.opcodes[1].dg == 1
+    assert encoded_frame.opcodes[1].db == 1
+    assert isinstance(encoded_frame.opcodes[2], IndexOpcode)

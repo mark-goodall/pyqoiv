@@ -98,6 +98,10 @@ class Encoder:
                 if np.array_equal(pixel, last_pixel) and last_pixel_count < 62:
                     last_pixel_count += 1
                     continue
+                elif np.array_equal(pixel, last_pixel):
+                    opcodes.append(RunOpcode(run=last_pixel_count))
+                    last_pixel_count = 1
+                    continue
                 elif last_pixel_count > 0:
                     opcodes.append(RunOpcode(run=last_pixel_count))
                     last_pixel_count = 0
@@ -113,6 +117,10 @@ class Encoder:
             if opcode is None:
                 opcode = RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2])
             opcodes.append(opcode)
+
+        if last_pixel_count > 0:
+            opcodes.append(RunOpcode(run=last_pixel_count))
+
         return EncodedFrame(
             header=QovFrameHeader(frame_type=FrameType.Key), opcodes=opcodes
         )

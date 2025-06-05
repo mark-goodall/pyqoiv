@@ -9,6 +9,7 @@ def test_header():
     assert h.magic == "qoiv"
     file = BytesIO()
     h.write(file)
+    assert 16 == file.tell()
     file.seek(0)
     h2 = QovHeader.read(file)
     assert h2.magic == h.magic
