@@ -78,8 +78,8 @@ class PixelHashMap:
     def push(self, pixel: NDArray[np.uint8]) -> int:
         """Push a pixel into the hash map."""
         r, g, b = pixel
-        index = (r * 3 + g * 5 + b * 7) % self.size
 
+        index = self.index_of(r, g, b)
         self.pixels[index] = pixel
         return index
 
@@ -92,12 +92,15 @@ class PixelHashMap:
     def __contains__(self, pixel: NDArray[np.uint8]) -> bool:
         """Check the colour is in the map"""
         r, g, b = pixel
-        index = (r * 3 + g * 5 + b * 7) % self.size
-        return np.array_equal(self.pixels[index], pixel)
+        return np.array_equal(self.pixels[self.index_of(r, g, b)], pixel)
 
     def clear(self):
         """Clear the hash map."""
         self.pixels.fill(0)
+
+    def index_of(self, r: int, g: int, b: int) -> int:
+        """Calculate the index of a pixel in the hash map."""
+        return (r * 3 + g * 5 + b * 7) % self.size
 
 
 @dataclass

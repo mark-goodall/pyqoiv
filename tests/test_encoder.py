@@ -9,7 +9,7 @@ import pytest
 from .samples import short_test_sequences
 
 
-class TestOpcode(Opcode):
+class FakeOpcode(Opcode):
     def write(self, file: BufferedIOBase):
         """Write the opcode to the file."""
         file.write(b"\x00")
@@ -21,7 +21,7 @@ class TestOpcode(Opcode):
 
 def test_encoded_frame():
     frame = EncodedFrame(
-        header=QovFrameHeader(frame_type=FrameType.Key), opcodes=[TestOpcode()]
+        header=QovFrameHeader(frame_type=FrameType.Key), opcodes=[FakeOpcode()]
     )
     file = BytesIO()
     frame.write(file)
@@ -33,7 +33,7 @@ def test_encoded_frame():
     assert file.read() == b""  # Ensure no extra data is read
 
     assert len(frame) == 1
-    frame.opcodes.append(TestOpcode())
+    frame.opcodes.append(FakeOpcode())
     assert len(frame) == 2
 
 
