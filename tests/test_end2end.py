@@ -10,7 +10,7 @@ from .samples import short_test_sequences
 
 
 @pytest.mark.parametrize(
-    "video, width, height, frames, colourspace, keyframe_interval, max_keyframe_interval",
+    "video, width, height, frames, colourspace, keyframe_interval",
     short_test_sequences,
 )
 def test_end_to_end(
@@ -20,12 +20,9 @@ def test_end_to_end(
     frames: int,
     colourspace: ColourSpace,
     keyframe_interval: Optional[int],
-    max_keyframe_interval: Optional[int],
 ):
     file = BytesIO()
-    encoder = Encoder(
-        file, width, height, colourspace, keyframe_interval, max_keyframe_interval
-    )
+    encoder = Encoder(file, width, height, colourspace, keyframe_interval)
     for frame in video():
         encoder.push(frame)
 

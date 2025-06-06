@@ -1,21 +1,19 @@
 from .types import ColourSpace, QovHeader, PixelHashMap, QovFrameHeader, FrameType
-from .opcodes import Opcode, RgbOpcode, IndexOpcode, DiffOpcode, RunOpcode
+from .opcodes import (
+    Opcode,
+    RgbOpcode,
+    IndexOpcode,
+    DiffOpcode,
+    RunOpcode,
+    DiffFrameOpcode,
+)
 from io import BytesIO
 from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
-from enum import Enum
 from dataclasses import dataclass
 from typing import List
 from io import BufferedIOBase
-
-
-class KeyFrameNow(Enum):
-    """A quick enum to determine if the next frame should be a keyframe."""
-
-    No = 0
-    Maybe = 1
-    Yes = 2
 
 
 @dataclass
@@ -46,13 +44,11 @@ class Encoder:
         height: int,
         colourspace: ColourSpace,
         keyframe_interval: Optional[int] = None,
-        max_keyframe_interval: Optional[int] = 600,
     ):
         """Construct a new encoder."""
         self.header = QovHeader(width=width, height=height, colourspace=colourspace)
         self.file = file
         self.keyframe_interval = keyframe_interval
-        self.max_keyframe_interval = max_keyframe_interval
         self.last_keyframe: Optional[NDArray[np.uint8]] = None
         self.frames_since_last_keyframe: int = -1
         self.header.write(file)
@@ -63,34 +59,40 @@ class Encoder:
         self.frames_since_last_keyframe = -1
 
     @property
-    def is_next_frame_keyframe(self) -> KeyFrameNow:
-        """Partly determine if the next frame is a keyframe."""
+    def is_next_frame_keyframe(self) -> bool:
+        """Determine if the next frame is a keyframe."""
         if self.frames_since_last_keyframe == -1:
-            return KeyFrameNow.Yes
+            self.frames_since_last_keyframe = 0
+            return True
 
-        if self.keyframe_interval is not None:
-            if self.frames_since_last_keyframe >= self.keyframe_interval:
-                self.frames_since_last_keyframe = 0
-                return KeyFrameNow.Yes
+        if self.keyframe_interval is None:
+            return True
 
-        if self.max_keyframe_interval is not None:
-            if self.frames_since_last_keyframe >= self.max_keyframe_interval:
-                self.frames_since_last_keyframe = 0
-                return KeyFrameNow.Yes
-            else:
-                return KeyFrameNow.Maybe
+        if self.frames_since_last_keyframe >= self.keyframe_interval:
+            self.frames_since_last_keyframe = 0
+            return True
 
-        return KeyFrameNow.No
+        return False
 
     def encode_keyframe(
         self, frame: NDArray[np.uint8], pixels: PixelHashMap
     ) -> EncodedFrame:
         """Encode a frame as a keyframe."""
+        return self._encode_frame(frame, pixels, None, None)
+
+    def _encode_frame(
+        self,
+        frame: NDArray[np.uint8],
+        pixels: PixelHashMap,
+        key_frame_flat: Optional[NDArray[np.uint8]],
+        key_pixels: Optional[PixelHashMap],
+        exhaustive: bool = False,
+    ):
         opcodes: List[Opcode] = []
 
         last_pixel: Optional[NDArray[np.uint8]] = None
         last_pixel_count = 0
-        for pixel in frame.reshape(-1, 3):
+        for pixel_pos, pixel in enumerate(frame.reshape(-1, 3)):
             opcode = None
 
             if last_pixel is not None:
@@ -112,6 +114,16 @@ class Encoder:
 
             if pixel in pixels:
                 opcode = IndexOpcode(index=pixels.push(pixel))
+
+            if key_frame_flat is not None and key_pixels is not None:
+                if exhaustive:
+                    raise NotImplementedError()
+                else:
+                    if pixel in key_pixels:
+                        key_index = key_pixels.index_of(pixel[0], pixel[1], pixel[2])
+                        opcode = DiffFrameOpcode(True, True, key_index, 0, 0, 0)
+                    elif np.array_equal(pixel, key_frame_flat[pixel_pos]):
+                        opcode = DiffFrameOpcode(True, False, 0, 0, 0, 0)
             pixels.push(pixel)
             last_pixel = pixel
             if opcode is None:
@@ -121,38 +133,39 @@ class Encoder:
         if last_pixel_count > 0:
             opcodes.append(RunOpcode(run=last_pixel_count))
 
+        frame_type = FrameType.Key if key_pixels is None else FrameType.Predicted
         return EncodedFrame(
-            header=QovFrameHeader(frame_type=FrameType.Key), opcodes=opcodes
+            header=QovFrameHeader(
+                frame_type=frame_type,
+            ),
+            opcodes=opcodes,
         )
 
     def encode_predicted(
-        self, frame: NDArray[np.uint8], pixels: PixelHashMap
+        self,
+        frame: NDArray[np.uint8],
+        pixels: PixelHashMap,
+        key_frame_flat: NDArray[np.uint8],
+        key_pixels: PixelHashMap,
     ) -> EncodedFrame:
         """Encode a predicted frame."""
-        # TODO encode a predicted frame
-        return self.encode_keyframe(frame, pixels)
+        return self._encode_frame(frame, pixels, key_frame_flat, key_pixels)
 
     def push(self, frame: NDArray[np.uint8]) -> None:
         """Push a new frame into the encoder."""
-        is_keyframe = self.is_next_frame_keyframe
 
-        if is_keyframe == KeyFrameNow.Yes:
+        if self.is_next_frame_keyframe:
             self.pixels.clear()
             encoded = self.encode_keyframe(frame, self.pixels)
+            self.key_frame_flat = frame.reshape(-1, 3)
             encoded.write(self.file)
 
-        elif is_keyframe == KeyFrameNow.No:
-            encoded = self.encode_predicted(frame, self.pixels)
-            encoded.write(self.file)
         else:
-            p = self.encode_predicted(frame, self.pixels)
-            new_pixels = PixelHashMap()
-            k = self.encode_keyframe(frame, new_pixels)
-            if len(p) > len(k):
-                p.write(self.file)
-            else:
-                k.write(self.file)
-                self.pixels = new_pixels
+            encoded = self.encode_predicted(
+                frame, self.pixels, self.key_frame_flat, PixelHashMap()
+            )
+            encoded.write(self.file)
+            self.frames_since_last_keyframe += 1
 
     def flush(self) -> None:
         """Flush the encoder to the file."""

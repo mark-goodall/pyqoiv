@@ -37,8 +37,10 @@ def create_ball_video(
 
 
 short_test_sequences = [
-    (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None, 6),
-    (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None, 6),
-    (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6, None),
-    (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6, None),
+    # Keyframe only
+    (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None),
+    (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None),
+    # With inter frames
+    (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6),
+    (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6),
 ]
