@@ -1,4 +1,10 @@
-from pyqoiv.opcodes import RgbOpcode, IndexOpcode, DiffOpcode, RunOpcode
+from pyqoiv.opcodes import (
+    DiffFrameOpcode,
+    RgbOpcode,
+    IndexOpcode,
+    DiffOpcode,
+    RunOpcode,
+)
 from io import BytesIO
 import pytest
 
@@ -100,12 +106,49 @@ def test_run_opcode_invalid():
         RunOpcode.read(BytesIO(b))
 
 
+def test_diff_frame_opcode():
+    diff_frame = DiffFrameOpcode(
+        key_frame=True, use_index=False, index=10, dr=-1, dg=0, db=1
+    )
+    assert len(diff_frame) == 2
+    file = BytesIO()
+    diff_frame.write(file)
+    file.seek(0)
+    assert DiffFrameOpcode.is_next(file)
+    new_diff_frame = DiffFrameOpcode.read(file)
+    assert diff_frame == new_diff_frame
+
+
+def test_diff_frame_opcode_invalid():
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=64, dr=-1, dg=0, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=-64, dr=-1, dg=0, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=-3, dg=0, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=-3, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=0, db=-3)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=3, dg=0, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=3, db=1)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=0, db=3)
+    b = b"\xc0\x40"
+    assert not DiffFrameOpcode.is_next(BytesIO(b))
+    with pytest.raises(ValueError):
+        DiffFrameOpcode.read(BytesIO(b))
+
+
 def test_comparisions():
     opcodes = [
         RgbOpcode(255, 128, 64),
         DiffOpcode(-1, 0, 1),
         IndexOpcode(42),
         RunOpcode(42),
+        DiffFrameOpcode(True, False, 10, -1, 0, 1),
     ]
 
     for a in opcodes:
@@ -117,4 +160,4 @@ def test_comparisions():
             if a == b:
                 assert b.is_next(file)
             else:
-                assert not b.is_next(file)
+                assert not b.is_next(file), f"Expected {a} and {b} to not be equal"
