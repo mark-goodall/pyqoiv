@@ -51,8 +51,13 @@ class Encoder:
         self.keyframe_interval = keyframe_interval
         self.last_keyframe: Optional[NDArray[np.uint8]] = None
         self.frames_since_last_keyframe: int = -1
+        self.total_frames = 0
         self.header.write(file)
         self.pixels = PixelHashMap()
+
+    def __repr__(self) -> str:
+        """String representation of the encoder."""
+        return f"Encoder(width={self.header.width}, height={self.header.height}, colourspace={self.header.colourspace}, keyframe_interval={self.keyframe_interval}, total_frames={self.total_frames})"
 
     def trigger_keyframe(self) -> None:
         """Ensure that the next frame is a keyframe."""
@@ -113,17 +118,19 @@ class Encoder:
                     opcode = DiffOpcode(diff[0], diff[1], diff[2])
 
             if pixel in pixels:
-                opcode = IndexOpcode(index=pixels.push(pixel))
+                opcode = IndexOpcode(
+                    index=pixels.index_of(pixel[0], pixel[1], pixel[2])
+                )
 
-            if key_frame_flat is not None and key_pixels is not None:
+            if opcode is None and key_frame_flat is not None and key_pixels is not None:
                 if exhaustive:
                     raise NotImplementedError()
                 else:
                     if pixel in key_pixels:
                         key_index = key_pixels.index_of(pixel[0], pixel[1], pixel[2])
-                        opcode = DiffFrameOpcode(True, True, key_index, 0, 0, 0)
+                        opcode = DiffFrameOpcode(True, True, 0, 0, 0, index=key_index)
                     elif np.array_equal(pixel, key_frame_flat[pixel_pos]):
-                        opcode = DiffFrameOpcode(True, False, 0, 0, 0, 0)
+                        opcode = DiffFrameOpcode(True, False, 0, 0, 0, diff=0)
             pixels.push(pixel)
             last_pixel = pixel
             if opcode is None:
@@ -162,10 +169,12 @@ class Encoder:
 
         else:
             encoded = self.encode_predicted(
-                frame, self.pixels, self.key_frame_flat, PixelHashMap()
+                frame, PixelHashMap(), self.key_frame_flat, self.pixels
             )
             encoded.write(self.file)
             self.frames_since_last_keyframe += 1
+
+        self.total_frames += 1
 
     def flush(self) -> None:
         """Flush the encoder to the file."""

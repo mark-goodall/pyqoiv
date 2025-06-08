@@ -1,7 +1,7 @@
 import struct
 import os
 from collections.abc import Sized
-from typing import Protocol
+from typing import Protocol, Optional
 from io import BufferedIOBase
 from dataclasses import dataclass
 
@@ -168,12 +168,26 @@ class DiffFrameOpcode(Opcode):
     """
 
     def __init__(
-        self, key_frame: bool, use_index: bool, index: int, dr: int, dg: int, db: int
+        self,
+        key_frame: bool,
+        use_index: bool,
+        dr: int,
+        dg: int,
+        db: int,
+        index: Optional[int] = None,
+        diff: Optional[int] = None,
     ):
         """Construct a new DiffFrameOpcode."""
         self.key_frame = key_frame
         self.use_index = use_index
-        self.index = index
+        if diff and index:
+            raise ValueError("Only one of index or diff can be provided")
+        if index is not None:
+            self.index = index
+        elif diff is not None:
+            self.index = diff + 32
+        else:
+            raise ValueError("Either index or diff must be provided")
         self.dr = dr
         self.dg = dg
         self.db = db
@@ -195,6 +209,14 @@ class DiffFrameOpcode(Opcode):
             )
         return False
 
+    def __repr__(self) -> str:
+        """String representation of the DiffFrameOpcode."""
+        return (
+            f"DiffFrameOpcode(key_frame={self.key_frame}, "
+            f"use_index={self.use_index}, diff={self.diff}, index={self.index}, "
+            f"dr={self.dr}, dg={self.dg}, db={self.db})"
+        )
+
     @staticmethod
     def is_next(file: BufferedIOBase) -> bool:
         """Determine if the next opcode is a DiffFrameOpcode."""
@@ -214,7 +236,7 @@ class DiffFrameOpcode(Opcode):
         dr = ((b[1] >> 4) & 0x03) - 2
         dg = ((b[1] >> 2) & 0x03) - 2
         db = (b[1] & 0x03) - 2
-        return DiffFrameOpcode(key_frame, use_index, index, dr, dg, db)
+        return DiffFrameOpcode(key_frame, use_index, dr, dg, db, index)
 
     @property
     def index(self) -> int:

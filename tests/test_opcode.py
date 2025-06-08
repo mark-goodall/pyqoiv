@@ -148,7 +148,7 @@ def test_comparisions():
         DiffOpcode(-1, 0, 1),
         IndexOpcode(42),
         RunOpcode(42),
-        DiffFrameOpcode(True, False, 10, -1, 0, 1),
+        DiffFrameOpcode(True, False, -1, 0, 1, index=10),
     ]
 
     for a in opcodes:
