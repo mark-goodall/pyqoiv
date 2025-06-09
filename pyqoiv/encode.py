@@ -84,58 +84,73 @@ class Encoder:
         """Encode a frame as a keyframe."""
         return self._encode_frame(frame, pixels, None, None)
 
+    @staticmethod
+    def pixel_equal(a: NDArray[np.uint8], b: NDArray[np.uint8]) -> bool:
+        """Check if two pixels are equal."""
+        return a[0] == b[0] and a[1] == b[1] and a[2] == b[2]
+
     def _encode_frame(
         self,
         frame: NDArray[np.uint8],
         pixels: PixelHashMap,
         key_frame_flat: Optional[NDArray[np.uint8]],
         key_pixels: Optional[PixelHashMap],
-        exhaustive: bool = False,
-    ):
+    ) -> EncodedFrame:
         """Encode a single frame."""
         opcodes: List[Opcode] = []
 
         last_pixel: Optional[NDArray[np.uint8]] = None
-        last_pixel_count = 0
-        for pixel_pos, pixel in enumerate(frame.reshape(-1, 3)):
-            opcode = None
-
+        last_pixel_count: int = 0
+        is_kf_flat = key_frame_flat is not None
+        is_kf_pixels = key_pixels is not None
+        for pixel_pos, pixel in enumerate(frame.reshape(-1, 3, copy=False)):
             if last_pixel is not None:
                 # Handle runs
-                if np.array_equal(pixel, last_pixel) and last_pixel_count < 62:
-                    last_pixel_count += 1
-                    continue
-                elif np.array_equal(pixel, last_pixel):
+                pixel_equal = Encoder.pixel_equal(pixel, last_pixel)
+                if pixel_equal:
+                    if last_pixel_count < 62:
+                        last_pixel_count += 1
+                        continue
+
                     opcodes.append(RunOpcode(run=last_pixel_count))
                     last_pixel_count = 1
                     continue
-                elif last_pixel_count > 0:
+
+                if last_pixel_count > 0:
                     opcodes.append(RunOpcode(run=last_pixel_count))
                     last_pixel_count = 0
 
-                diff = pixel - last_pixel
-                if -2 <= diff[0] < 2 and -2 <= diff[1] < 2 and -2 <= diff[2] < 2:
-                    opcode = DiffOpcode(diff[0], diff[1], diff[2])
+                dr, dg, db = pixel - last_pixel
+                if -2 <= dr < 2 and -2 <= dg < 2 and -2 <= db < 2:
+                    opcodes.append(DiffOpcode(dr, dg, db))
+                    pixels.push(pixel)
+                    last_pixel = pixel
+                    continue
 
             if pixel in pixels:
-                opcode = IndexOpcode(
-                    index=pixels.index_of(pixel[0], pixel[1], pixel[2])
+                opcodes.append(
+                    IndexOpcode(index=pixels.index_of(pixel[0], pixel[1], pixel[2]))
                 )
+                pixels.push(pixel)
+                last_pixel = pixel
+                continue
 
-            if opcode is None and key_frame_flat is not None and key_pixels is not None:
-                if exhaustive:
-                    raise NotImplementedError()
-                else:
-                    if pixel in key_pixels:
-                        key_index = key_pixels.index_of(pixel[0], pixel[1], pixel[2])
-                        opcode = DiffFrameOpcode(True, True, 0, 0, 0, index=key_index)
-                    elif np.array_equal(pixel, key_frame_flat[pixel_pos]):
-                        opcode = DiffFrameOpcode(True, False, 0, 0, 0, diff=0)
+            if is_kf_pixels and pixel in key_pixels:
+                key_index = key_pixels.index_of(pixel[0], pixel[1], pixel[2])
+                opcodes.append(DiffFrameOpcode(True, True, 0, 0, 0, index=key_index))
+                pixels.push(pixel)
+                last_pixel = pixel
+                continue
+            if is_kf_flat and Encoder.pixel_equal(pixel, key_frame_flat[pixel_pos]):
+                opcodes.append(DiffFrameOpcode(True, False, 0, 0, 0, diff=0))
+                pixels.push(pixel)
+                last_pixel = pixel
+                continue
+
+            # Fallback to RGB opcode
             pixels.push(pixel)
             last_pixel = pixel
-            if opcode is None:
-                opcode = RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2])
-            opcodes.append(opcode)
+            opcodes.append(RgbOpcode(r=pixel[0], g=pixel[1], b=pixel[2]))
 
         if last_pixel_count > 0:
             opcodes.append(RunOpcode(run=last_pixel_count))

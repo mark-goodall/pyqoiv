@@ -92,7 +92,7 @@ class PixelHashMap:
     def __contains__(self, pixel: NDArray[np.uint8]) -> bool:
         """Check the colour is in the map"""
         r, g, b = pixel
-        return np.array_equal(self.pixels[self.index_of(r, g, b)], pixel)
+        return PixelHashMap.pixel_equal(self.pixels[self.index_of(r, g, b)], pixel)
 
     def clear(self):
         """Clear the hash map."""
@@ -101,6 +101,11 @@ class PixelHashMap:
     def index_of(self, r: int, g: int, b: int) -> int:
         """Calculate the index of a pixel in the hash map."""
         return (r * 3 + g * 5 + b * 7) % self.size
+
+    @staticmethod
+    def pixel_equal(a: NDArray[np.uint8], b: NDArray[np.uint8]) -> bool:
+        """Check if two pixels are equal."""
+        return a[0] == b[0] and a[1] == b[1] and a[2] == b[2]
 
 
 @dataclass

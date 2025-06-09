@@ -106,12 +106,9 @@ def test_encoder_uses_diff_opcode_as_expected():
 def test_encoder_uses_index_opcode_as_expected():
     encoder = Encoder(BytesIO(), width=10, height=10, colourspace=ColourSpace.sRGB)
     encoded_frame = encoder.encode_keyframe(
-        np.array([[[1, 1, 1], [2, 2, 2], [1, 1, 1]]]), PixelHashMap()
+        np.array([[[1, 1, 1], [20, 20, 20], [1, 1, 1]]]), PixelHashMap()
     )
     assert len(encoded_frame.opcodes) == 3
     assert isinstance(encoded_frame.opcodes[0], RgbOpcode)
-    assert isinstance(encoded_frame.opcodes[1], DiffOpcode)
-    assert encoded_frame.opcodes[1].dr == 1
-    assert encoded_frame.opcodes[1].dg == 1
-    assert encoded_frame.opcodes[1].db == 1
+    assert isinstance(encoded_frame.opcodes[1], RgbOpcode)
     assert isinstance(encoded_frame.opcodes[2], IndexOpcode)

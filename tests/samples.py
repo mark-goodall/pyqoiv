@@ -56,7 +56,7 @@ short_test_sequences = [
     (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None),
     (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, None),
     # With inter frames
-    (create_scanning_line(6, 20), 6, 1, 20, ColourSpace.sRGB, 6),
+    (create_scanning_line(6, 200), 6, 1, 200, ColourSpace.sRGB, 6),
     (create_static_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6),
     (create_ball_video(64, 64, 20), 64, 64, 20, ColourSpace.sRGB, 6),
 ]
