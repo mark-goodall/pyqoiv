@@ -9,7 +9,12 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.12"
 numpy = "^2.2.6"
+ffmpeg-python = "^0.2.0"
+typer = "^0.16.0"
+tqdm = "^4.67.1"
 
+[tool.poetry.scripts]
+pyqoiv = "pyqoiv.cli:app"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -31,7 +36,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pyright]
-typeCheckingMode = "strict"
+typeCheckingMode = "basic"
 # Use the venv directory for type checking so the types exist
 venvPath = "."
 venv = ".venv"

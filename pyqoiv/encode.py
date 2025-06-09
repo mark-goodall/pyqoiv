@@ -7,7 +7,6 @@ from .opcodes import (
     RunOpcode,
     DiffFrameOpcode,
 )
-from io import BytesIO
 from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
@@ -39,7 +38,7 @@ class Encoder:
 
     def __init__(
         self,
-        file: BytesIO,
+        file: BufferedIOBase,
         width: int,
         height: int,
         colourspace: ColourSpace,
@@ -93,6 +92,7 @@ class Encoder:
         key_pixels: Optional[PixelHashMap],
         exhaustive: bool = False,
     ):
+        """Encode a single frame."""
         opcodes: List[Opcode] = []
 
         last_pixel: Optional[NDArray[np.uint8]] = None
