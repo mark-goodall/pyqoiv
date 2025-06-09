@@ -4,6 +4,7 @@ from pyqoiv.opcodes import (
     IndexOpcode,
     DiffOpcode,
     RunOpcode,
+    FrameRunOpcode,
 )
 from io import BytesIO
 import pytest
@@ -136,10 +137,34 @@ def test_diff_frame_opcode_invalid():
         DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=3, db=1)
     with pytest.raises(ValueError):
         DiffFrameOpcode(key_frame=True, use_index=False, index=2, dr=0, dg=0, db=3)
+    with pytest.raises(ValueError):
+        DiffFrameOpcode(key_frame=True, use_index=False, dr=0, dg=0, db=3)
     b = b"\xc0\x40"
     assert not DiffFrameOpcode.is_next(BytesIO(b))
     with pytest.raises(ValueError):
         DiffFrameOpcode.read(BytesIO(b))
+
+
+def test_frame_run_opcode():
+    frame_run = FrameRunOpcode(is_keyframe=True, run=23)
+    assert len(frame_run) == 2
+    file = BytesIO()
+    frame_run.write(file)
+    file.seek(0)
+    assert FrameRunOpcode.is_next(file)
+    new_frame_run = FrameRunOpcode.read(file)
+    assert frame_run == new_frame_run
+
+
+def test_frame_run_opcode_invalid():
+    with pytest.raises(ValueError):
+        frame_run = FrameRunOpcode(is_keyframe=True, run=623)
+        frame_run.write(BytesIO())
+
+    b = b"\xc0\x40"
+    assert not FrameRunOpcode.is_next(BytesIO(b))
+    with pytest.raises(ValueError):
+        FrameRunOpcode.read(BytesIO(b))
 
 
 def test_comparisions():
@@ -149,6 +174,7 @@ def test_comparisions():
         IndexOpcode(42),
         RunOpcode(42),
         DiffFrameOpcode(True, False, -1, 0, 1, index=10),
+        FrameRunOpcode(True, 23),
     ]
 
     for a in opcodes:

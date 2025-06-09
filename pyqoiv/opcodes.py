@@ -153,6 +153,39 @@ class RunOpcode(Opcode):
         return RunOpcode(run=run)
 
 
+@dataclass
+class FrameRunOpcode(Opcode):
+    """This Opcode replaces the QOI_OP_RGBA opcode, and is used to represent a run of identical pixels from a previous frame."""
+
+    is_keyframe: bool
+    run: int
+
+    def write(self, file: BufferedIOBase) -> None:
+        """Write the FrameRunOpcode to the provided file handle."""
+        if not (1 <= self.run <= 128):
+            raise ValueError("Run value must be between 1 and 128")
+        file.write(struct.pack("<BB", 0xFF, (self.run - 1) | self.is_keyframe << 7))
+
+    def __len__(self) -> int:
+        return 2
+
+    @staticmethod
+    def is_next(file: BufferedIOBase) -> bool:
+        code = file.read(1)
+        file.seek(-1, os.SEEK_CUR)
+        return code[0] == 0xFF
+
+    @staticmethod
+    def read(file: BufferedIOBase) -> "FrameRunOpcode":
+        """Read a FrameRunOpcode from the provided file handle."""
+        code = file.read(2)
+        if len(code) != 2 or code[0] != 0xFF:
+            raise ValueError("Invalid FrameRun opcode")
+        is_keyframe = (code[1] & 0x80) != 0
+        run = (code[1] & 0x7F) + 1
+        return FrameRunOpcode(is_keyframe, run)
+
+
 class DiffFrameOpcode(Opcode):
     """This Opcode replaces the QOI_OP_LUMA opcode, and is used to query data from previous frames.
 
@@ -208,14 +241,6 @@ class DiffFrameOpcode(Opcode):
                 and self.db == other.db
             )
         return False
-
-    def __repr__(self) -> str:
-        """String representation of the DiffFrameOpcode."""
-        return (
-            f"DiffFrameOpcode(key_frame={self.key_frame}, "
-            f"use_index={self.use_index}, diff={self.diff}, index={self.index}, "
-            f"dr={self.dr}, dg={self.dg}, db={self.db})"
-        )
 
     @staticmethod
     def is_next(file: BufferedIOBase) -> bool:
