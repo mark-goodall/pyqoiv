@@ -52,7 +52,7 @@ repos:
         args: [--fail-under=95, -vv]
         pass_filenames: false # needed if excluding files with pyproject.toml or setup.cfg
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.401
+    rev: v1.1.402
     hooks:
       - id: pyright
   - repo: https://github.com/rhysd/actionlint

@@ -37,6 +37,36 @@ def test_encoded_frame():
     assert len(frame) == 2
 
 
+def test_encoder_pixels_equal():
+    assert 1 == Encoder.pixels_equal(
+        np.array(
+            [
+                [1, 2, 3],
+                [1, 2, 3],
+                [2, 2, 2],
+            ]
+        )
+    )
+    assert 0 == Encoder.pixels_equal(
+        np.array(
+            [
+                [2, 2, 3],
+                [1, 2, 4],
+                [2, 2, 2],
+            ]
+        )
+    )
+    assert 2 == Encoder.pixels_equal(
+        np.array(
+            [
+                [1, 2, 3],
+                [1, 2, 3],
+                [1, 2, 3],
+            ]
+        )
+    )
+
+
 @pytest.mark.parametrize(
     "video, width, height, frames, colourspace, keyframe_interval",
     short_test_sequences,

@@ -2,7 +2,14 @@ from io import BytesIO
 from numpy.typing import NDArray
 import numpy as np
 from .types import QovHeader, QovFrameHeader, FrameType, PixelHashMap
-from .opcodes import RgbOpcode, DiffOpcode, IndexOpcode, RunOpcode, DiffFrameOpcode
+from .opcodes import (
+    RgbOpcode,
+    DiffOpcode,
+    IndexOpcode,
+    FrameRunOpcode,
+    RunOpcode,
+    DiffFrameOpcode,
+)
 
 
 class Decoder:
@@ -62,11 +69,9 @@ class Decoder:
                     (pixel_read - 1) // self.header.width,
                     (pixel_read - 1) % self.header.width,
                 ]
-                for i in range(opcode.run):
-                    frame[
-                        (pixel_read + i) // self.header.width,
-                        (pixel_read + i) % self.header.width,
-                    ] = last_pixel
+                frame.reshape(-1, 3, copy=False)[
+                    pixel_read : pixel_read + opcode.run
+                ] = last_pixel
                 pixel_read += opcode.run
             elif IndexOpcode.is_next(self.file):
                 index_opcode = IndexOpcode.read(self.file)
@@ -105,6 +110,15 @@ class Decoder:
                 else:
                     raise NotImplementedError()
                 pixel_read += 1
+            elif FrameRunOpcode.is_next(self.file) and self.key_frame_flat is not None:
+                opcode = FrameRunOpcode.read(self.file)
+                if not opcode.is_keyframe:
+                    raise NotImplementedError()
+
+                frame.reshape(-1, 3, copy=False)[
+                    pixel_read : pixel_read + opcode.run
+                ] = self.key_frame_flat[pixel_read : pixel_read + opcode.run]
+                pixel_read += opcode.run
             else:
                 raise ValueError("Unexpected opcode in key frame.")
 
