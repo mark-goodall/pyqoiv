@@ -1,12 +1,15 @@
+import time
 from numpy.typing import NDArray
 import typer
 from pathlib import Path
 from pyqoiv.encode import Encoder
+from pyqoiv.decode import Decoder
 from pyqoiv.types import ColourSpace
 import ffmpeg
 import numpy as np
 import tqdm as tqdm
 from typing import Generator
+import json
 
 app = typer.Typer()
 
@@ -52,6 +55,41 @@ def encode(input_file: Path, output_file: Path) -> None:
 
 
 @app.command()
-def decode() -> None:
-    """Decode qoiv formatted file"""
-    pass
+def decode(input_file: Path, output_file: Path) -> None:
+    """Decode qoiv formatted file into a ffv1 encoded video file."""
+
+    decoder = Decoder(input_file.open("rb"))
+    width, height = decoder.header.width, decoder.header.height
+    out = (
+        ffmpeg.input("pipe:", format="rawvideo", pix_fmt="rgb24", s=f"{width}x{height}")
+        .output(str(output_file), vcodec="ffv1")
+        .run_async(pipe_stdin=True, quiet=True)
+    )
+
+    for frame, _ in tqdm.tqdm(decoder, desc="Decoding"):
+        out.stdin.write(frame.reshape(-1, 3, copy=False).tobytes())
+
+    out.stdin.close()
+    out.wait()
+
+
+@app.command()
+def frameinfo(input_file: Path) -> None:
+    """Print the information about frames and opcodes in a qoiv file."""
+    decoder = Decoder(input_file.open("rb"))
+    print(f"Header: {decoder.header}")
+
+    last_pos = decoder.file.tell()
+    then = time.time()
+    for count, (frame, details) in enumerate(decoder):
+        now = time.time()
+        frame_info = {
+            "frame_number": count,
+            "frame_position": decoder.file.tell(),
+            "frame_size": decoder.file.tell() - last_pos,
+            "opcodes": details,
+            "time_since_last_frame": now - then,
+        }
+        last_pos = decoder.file.tell()
+        then = now
+        print(json.dumps(frame_info, indent=2))

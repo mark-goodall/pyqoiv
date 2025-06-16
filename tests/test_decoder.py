@@ -23,7 +23,7 @@ def test_decoder_decodes_flat_frame_as_expected():
     decoder = Decoder(file)
     assert decoder.header.width == 10
     assert decoder.header.height == 10
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.ones((decoder.header.height, decoder.header.width, 3), dtype=np.uint8),
         frame,
@@ -41,7 +41,7 @@ def test_decoder_decodes_diff_frame_as_expected():
     decoder = Decoder(file)
     assert decoder.header.width == 3
     assert decoder.header.height == 1
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.array([[[1, 1, 1], [2, 2, 2], [1, 2, 3]]]),
         frame,
@@ -65,7 +65,7 @@ def test_decoder_decodes_index_frame_as_expected():
     decoder = Decoder(file)
     assert decoder.header.width == 4
     assert decoder.header.height == 1
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.array([[[1, 1, 1], [2, 2, 2], [1, 1, 1], [2, 2, 2]]]),
         frame,
@@ -86,7 +86,7 @@ def test_decoder_decodes_run_frame_as_expected():
     decoder = Decoder(file)
     assert decoder.header.width == 4
     assert decoder.header.height == 1
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.array([[[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]]),
         frame,
@@ -185,12 +185,12 @@ def test_decoder_decodes_diff_frame_frame_as_expected():
     assert decoder.header.width == 4
     assert decoder.header.height == 1
     next(decoder)
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3], [3, 3, 3]]]),
         frame,
     )
-    frame = next(decoder)
+    frame, _ = next(decoder)
     assert np.array_equal(
         np.array([[[4, 4, 4], [2, 2, 2], [3, 3, 3], [4, 4, 4]]]),
         frame,

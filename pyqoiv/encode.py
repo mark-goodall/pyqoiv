@@ -93,9 +93,10 @@ class Encoder:
     @staticmethod
     def pixels_equal(pixels: NDArray[np.uint8]) -> int:
         equal_rows = np.all(pixels[1:] == pixels[0], axis=1)
-        return (
-            int(np.argmax(~equal_rows)) if not np.all(equal_rows) else len(equal_rows)
-        )
+        for i in range(len(equal_rows)):
+            if not equal_rows[i]:
+                return i
+        return len(pixels) - 1
 
     def _encode_frame(
         self,
