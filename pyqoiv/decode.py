@@ -1,4 +1,6 @@
-from io import BytesIO
+from collections import defaultdict
+from io import BufferedIOBase
+from typing import Dict, Tuple
 from numpy.typing import NDArray
 import numpy as np
 from .types import QovHeader, QovFrameHeader, FrameType, PixelHashMap
@@ -15,7 +17,7 @@ from .opcodes import (
 class Decoder:
     """Decode a QOIV file into frames."""
 
-    def __init__(self, file: BytesIO):
+    def __init__(self, file: BufferedIOBase):
         """Construct a new decoder."""
         self.file = file
         self.header = QovHeader.read(file)
@@ -35,13 +37,15 @@ class Decoder:
         """Get the next frame."""
         return self.read_frame()
 
-    def read_frame(self) -> NDArray[np.uint8]:
+    def read_frame(self) -> Tuple[NDArray[np.uint8], Dict[str, int]]:
         """Read the next frame from the file."""
         frame_header = QovFrameHeader.read(self.file)
 
         frame = np.zeros((self.header.height, self.header.width, 3), dtype=np.uint8)
 
         pixels = PixelHashMap()
+
+        opcodes_read = defaultdict(int)
 
         pixel_read = 0
         while pixel_read < self.pixel_count:
@@ -55,6 +59,7 @@ class Decoder:
                 ] = [opcode.r, opcode.g, opcode.b]
                 pixels.push(frame[cy, cx])
                 pixel_read += 1
+                opcodes_read["rgb"] += 1
             elif DiffOpcode.is_next(self.file):
                 opcode = DiffOpcode.read(self.file)
                 frame[cy, cx] = frame[
@@ -63,6 +68,7 @@ class Decoder:
                 ] + np.array([opcode.dr, opcode.dg, opcode.db])
                 pixels.push(frame[cy, cx])
                 pixel_read += 1
+                opcodes_read["diff"] += 1
             elif RunOpcode.is_next(self.file):
                 opcode = RunOpcode.read(self.file)
                 last_pixel = frame[
@@ -73,10 +79,12 @@ class Decoder:
                     pixel_read : pixel_read + opcode.run
                 ] = last_pixel
                 pixel_read += opcode.run
+                opcodes_read["run"] += 1
             elif IndexOpcode.is_next(self.file):
                 index_opcode = IndexOpcode.read(self.file)
                 frame[cy, cx] = pixels[index_opcode.index]
                 pixel_read += 1
+                opcodes_read["index"] += 1
             elif DiffFrameOpcode.is_next(self.file):
                 if self.key_frame_flat is None:
                     raise ValueError("Unexpected DiffFrameOpcode without key frame.")
@@ -110,6 +118,7 @@ class Decoder:
                 else:
                     raise NotImplementedError()
                 pixel_read += 1
+                opcodes_read["diff_frame"] += 1
             elif FrameRunOpcode.is_next(self.file) and self.key_frame_flat is not None:
                 opcode = FrameRunOpcode.read(self.file)
                 if not opcode.is_keyframe:
@@ -119,6 +128,7 @@ class Decoder:
                     pixel_read : pixel_read + opcode.run
                 ] = self.key_frame_flat[pixel_read : pixel_read + opcode.run]
                 pixel_read += opcode.run
+                opcodes_read["frame_run"] += 1
             else:
                 raise ValueError("Unexpected opcode in key frame.")
 
@@ -126,4 +136,4 @@ class Decoder:
             self.key_pixels = pixels
             self.key_frame_flat = frame.reshape(-1, 3)
 
-        return frame
+        return frame, opcodes_read

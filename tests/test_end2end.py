@@ -32,7 +32,7 @@ def test_end_to_end(
 
     decoder = Decoder(file)
 
-    for input_frame, frame in zip(video(), decoder):
+    for input_frame, (frame, details) in zip(video(), decoder):
         assert np.array_equal(input_frame, frame), (
             "Decoded frame does not match input frame."
         )
