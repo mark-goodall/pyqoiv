@@ -98,7 +98,7 @@ class PixelHashMap:
         """Clear the hash map."""
         self.pixels.fill(0)
 
-    def index_of(self, r: int, g: int, b: int) -> int:
+    def index_of(self, r: int | np.uint8, g: int | np.uint8, b: int | np.uint8) -> int:
         """Calculate the index of a pixel in the hash map."""
         return (r * 3 + g * 5 + b * 7) % self.size
 
