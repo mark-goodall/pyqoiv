@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyqoiv"
-version = "0.3.0"
+version = "0.3.1"
 description = "A python implementation of QOIV, an video format based on QOI"
 authors = ["Mark Goodall <mark.goodall@gmail.com>"]
 readme = "README.md"
