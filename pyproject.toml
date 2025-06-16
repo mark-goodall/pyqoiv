@@ -46,3 +46,6 @@ venv = ".venv"
 exclude = ["tests"]
 ignore-module = true
 omit-covered-files = true
+
+[tool.codespell]
+skip = 'CHANGELOG.md'
