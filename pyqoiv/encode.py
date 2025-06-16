@@ -149,7 +149,15 @@ class Encoder:
                 )
                 match count:
                     case 0:
-                        pass
+                        dr, dg, db = pixel - key_frame_flat[pixel_pos]
+                        if -2 <= dr < 2 and -2 <= dg < 2 and -2 <= db < 2:
+                            opcodes.append(
+                                DiffFrameOpcode(True, False, dr, dg, db, diff=0)
+                            )
+                            pixels.push(pixel)
+                            last_pixel = pixel
+                            pixel_pos += 1
+                            continue
                     case 1:
                         opcodes.append(DiffFrameOpcode(True, False, 0, 0, 0, diff=0))
                         pixels.push(pixel)
