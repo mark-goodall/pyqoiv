@@ -43,6 +43,7 @@ jobs:
 
     permissions:
       id-token: write
+      contents: write
 
     steps:
       - name: Download package
@@ -53,3 +54,8 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Add to release
+        run: gh release upload ${{github.event.release.tag_name}} dist/*.whl dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
