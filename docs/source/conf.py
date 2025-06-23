@@ -8,13 +8,18 @@
 
 import os
 import sys
+import tomllib
 
 sys.path.insert(0, os.path.abspath("../../pyqoiv/"))
 
-project = "pyqoiv"
+with open("../../pyproject.toml", "rb") as f:
+    toml = tomllib.load(f)
+    pyproject = toml["tool"]["poetry"]
+
+project = pyproject["name"]
 copyright = "2025, Mark Goodall"
 author = "Mark Goodall"
-release = "0.3.1"
+release = pyproject["version"]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
