@@ -27,6 +27,16 @@
 - reworked encode and decode for perf, compariable compression to ffv1 using zstd
 - made the encoder slightly faster
 
+## v0.4.0 (2025-06-23)
+
+### Feat
+
+- handle small diff between frames
+
+### Perf
+
+- improve performance of encode (still very slow)
+
 ## v0.3.1 (2025-06-16)
 
 ### Fix
