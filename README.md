@@ -1,6 +1,9 @@
 # pyqoiv
 
-A python implementation of the QOV video format, based on the QOI image format.
+[![Test Code](https://github.com/mark-goodall/pyqoiv/actions/workflows/test.yml/badge.svg)](https://github.com/mark-goodall/pyqoiv/actions/workflows/test.yml)
+[![Docs](https://app.readthedocs.org/projects/pyqoiv/badge/?version=latest)](https://pyqoiv.readthedocs.io/en/latest/)
+
+A python implementation of the QOV video format, based on the [QOI image format](https://qoiformat.org/).
 Contains a number of opcode modifications to allow for inter frame comparisons.
 When post processed with zstd to further compress, the resulting file is
 comparable to FFV1 in terms of compression ratio. It is not as good as H265
