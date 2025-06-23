@@ -28,6 +28,8 @@ repos:
       - id: destroyed-symlinks
       - id: forbid-submodules
       - id: mixed-line-ending
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.20.0
     hooks:
@@ -65,3 +67,12 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.1
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.23
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
