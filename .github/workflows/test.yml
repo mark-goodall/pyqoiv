@@ -45,6 +45,8 @@ jobs:
         run: poetry run pytest --cov --cov-report=term-missing --junit-xml=test-results.xml --cov-report xml:cov.xml
 
       - uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: no-commit-to-branch
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' && matrix.poetry-version == 'latest'
 
       - name: Test Summary
