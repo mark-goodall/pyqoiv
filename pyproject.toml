@@ -10,7 +10,7 @@ license = "MIT"
 python = "^3.12"
 numpy = "^2.2.6"
 ffmpeg-python = "^0.2.0"
-typer = "^0.16.0"
+typer = ">=0.16,<0.18"
 tqdm = "^4.67.1"
 
 [tool.poetry.scripts]
